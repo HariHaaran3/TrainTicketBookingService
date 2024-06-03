@@ -56,6 +56,8 @@ SELECT * FROM ticket_booking_detail;
 
 * **RateLimiter is implemented with limitForPeriod=3 requests per second, timeoutDuration=1s, and limitRefreshPeriod=1s.**
 
+* **The cache mechanism is implemented using Guava Cache with an expiration time of 10 minutes.**
+
 ## 📝 Step 1: Create User
 
 * Endpoint: POST: http://localhost:8080/trainTicketBooking/v1/user
