@@ -1,4 +1,5 @@
 package com.example.trainbooking.serviceImpl;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,6 +28,7 @@ import com.example.trainbooking.repository.TicketBookingDetailRepository;
 import com.example.trainbooking.repository.TrainDetailRepository;
 import com.example.trainbooking.repository.TrainSectionAndSeatDetailRepository;
 import com.example.trainbooking.repository.UserDetailRepository;
+import com.google.common.cache.Cache;
 
 @ExtendWith(MockitoExtension.class)
 public class TrainBookingServiceImplTest {
@@ -45,6 +47,9 @@ public class TrainBookingServiceImplTest {
 
     @Mock
     private TrainSectionAndSeatDetailRepository trainSectionAndSeatDetailRepository;
+
+    @Mock
+    private Cache<Long, TicketBookingDetailResponse> ticketBookingCache;
 
     private TicketBookingDetailRequest ticketBookingDetailRequest;
     private UserDetail userDetail;
@@ -81,6 +86,9 @@ public class TrainBookingServiceImplTest {
         when(trainDetailRepository.findById(anyLong())).thenReturn(Optional.of(trainDetail));
         when(trainSectionAndSeatDetailRepository.findById(anyLong())).thenReturn(Optional.of(trainSectionAndSeatDetail));
         when(ticketBookingDetailRepository.save(any(TicketBookingDetail.class))).thenReturn(ticketBookingDetail);
+        
+        // This line may be causing unnecessary stubbing, comment it out
+        // when(ticketBookingCache.getIfPresent(anyLong())).thenReturn(null);
 
         TicketBookingDetailResponse response = trainBookingService.bookTicket(ticketBookingDetailRequest);
 
@@ -135,4 +143,3 @@ public class TrainBookingServiceImplTest {
         verify(ticketBookingDetailRepository).findById(anyLong());
     }
 }
-
