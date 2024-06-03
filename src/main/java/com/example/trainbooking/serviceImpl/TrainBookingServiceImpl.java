@@ -3,6 +3,7 @@ package com.example.trainbooking.serviceImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.transaction.Transactional;
@@ -23,6 +24,8 @@ import com.example.trainbooking.repository.TrainSectionAndSeatDetailRepository;
 import com.example.trainbooking.repository.UserDetailRepository;
 import com.example.trainbooking.service.TrainBookingService;
 import com.example.trainbooking.util.TicketBookingDetailMapper;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,6 +44,14 @@ public class TrainBookingServiceImpl implements TrainBookingService {
 
     @Autowired
     private TrainSectionAndSeatDetailRepository trainSectionAndSeatDetailRepository;
+
+    private Cache<Long, TicketBookingDetailResponse> ticketBookingCache;
+
+    public TrainBookingServiceImpl() {
+        ticketBookingCache = CacheBuilder.newBuilder()
+                                         .expireAfterWrite(10, TimeUnit.MINUTES)
+                                         .build();
+    }
 
     @Override
     @Transactional
@@ -83,18 +94,27 @@ public class TrainBookingServiceImpl implements TrainBookingService {
         trainSectionAndSeatDetailRepository.save(trainSectionAndSeatDetail);
 
         ticketBookingDetail = ticketBookingDetailRepository.save(ticketBookingDetail);
-        return TicketBookingDetailMapper.toResponse(ticketBookingDetail);
+        TicketBookingDetailResponse response = TicketBookingDetailMapper.toResponse(ticketBookingDetail);
+        ticketBookingCache.put(ticketBookingDetail.getTicketBookingId(), response);
+        return response;
     }
 
     @Override
     public TicketBookingDetailResponse getTicketDetails(Long ticketBookingId) {
+        TicketBookingDetailResponse cachedTicketDetail = ticketBookingCache.getIfPresent(ticketBookingId);
+        if (cachedTicketDetail != null) {
+            return cachedTicketDetail;
+        }
+
         TicketBookingDetail ticketBookingDetail = ticketBookingDetailRepository.findById(ticketBookingId)
                 .orElseThrow(() -> {
                     log.info("Ticket Booking Detail Not Found");
                     return new ResourceNotFoundException("Ticket Booking Detail Not Found");
                 });
 
-        return TicketBookingDetailMapper.toResponse(ticketBookingDetail);
+        TicketBookingDetailResponse response = TicketBookingDetailMapper.toResponse(ticketBookingDetail);
+        ticketBookingCache.put(response.getTicketBookingId(), response);
+        return response;
     }
 
     @Override
@@ -119,7 +139,9 @@ public class TrainBookingServiceImpl implements TrainBookingService {
         bookingDetail.setSeat(trainSectionAndSeatDetail.getSeat());
         ticketBookingDetailRepository.save(bookingDetail);
 
-        return TicketBookingDetailMapper.toResponse(bookingDetail);
+        TicketBookingDetailResponse response = TicketBookingDetailMapper.toResponse(bookingDetail);
+        ticketBookingCache.put(response.getTicketBookingId(), response);
+        return response;
     }
 
     @Override
@@ -138,6 +160,7 @@ public class TrainBookingServiceImpl implements TrainBookingService {
                         "Train section and seat detail not found for ID: " + ticketBooking.getSectionAndSeatId());
             }
             ticketBookingDetailRepository.deleteById(ticketBookingId);
+            ticketBookingCache.invalidate(ticketBookingId);
         } else {
             throw new ResourceNotFoundException("Ticket booking not found for ID: " + ticketBookingId);
         }}
@@ -180,6 +203,7 @@ public class TrainBookingServiceImpl implements TrainBookingService {
                         "Train section and seat detail not found for ID: " + ticketBooking.getSectionAndSeatId());
             }
             ticketBookingDetailRepository.deleteById(ticketBooking.getTicketBookingId());
+            ticketBookingCache.invalidate(ticketBooking.getTicketBookingId());
         }
     }
 
