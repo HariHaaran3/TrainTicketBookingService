@@ -48,9 +48,13 @@ SELECT * FROM ticket_booking_detail;
 
 ## 🌐 Endpoints
 
-1. First, we need to create a user and then authenticate the user to generate a JWT token. This JWT token is valid for 5 minutes. We need to use this JWT token in the header to access all the endpoints. Steps 1 and 2 below are mandatory, after which you can use the other endpoints with the JWT token.
+* **First, we need to create a user and then authenticate the user to generate a JWT token. This JWT token is valid for 5 minutes. We need to use this JWT token in the header to access all the endpoints. Steps 1 and 2 below are mandatory, after which you can use the other endpoints with the JWT token.**
 
-2. RateLimiter is implemented with limitForPeriod=3 requests per second, timeoutDuration=1s, and limitRefreshPeriod=1s.
+```
+   Example: Header [Authorization: Bearer your_jwt_token]
+```
+
+* **RateLimiter is implemented with limitForPeriod=3 requests per second, timeoutDuration=1s, and limitRefreshPeriod=1s.**
 
 ## 📝 Step 1: Create User
 
