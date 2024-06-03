@@ -1,5 +1,7 @@
 package com.example.trainbooking.serviceImpl;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,8 @@ import com.example.trainbooking.repository.TrainDetailRepository;
 import com.example.trainbooking.repository.TrainSectionAndSeatDetailRepository;
 import com.example.trainbooking.service.TrainDetailService;
 import com.example.trainbooking.util.TrainDetailMapper;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
 @Service
 public class TrainDetailServiceImpl implements TrainDetailService {
@@ -24,6 +28,14 @@ public class TrainDetailServiceImpl implements TrainDetailService {
 
     @Autowired
     private TrainSectionAndSeatDetailRepository trainSectionAndSeatDetailRepository;
+
+    private Cache<Long, TrainDetailResponse> trainDetailCache;
+
+    public TrainDetailServiceImpl() {
+        trainDetailCache = CacheBuilder.newBuilder()
+                                       .expireAfterWrite(10, TimeUnit.MINUTES)
+                                       .build();
+    }
 
     @Override
     public TrainDetailResponse createTrainDetail(TrainDetailRequest trainDetailRequest) {
@@ -37,7 +49,9 @@ public class TrainDetailServiceImpl implements TrainDetailService {
 
         TrainDetail trainDetail = TrainDetailMapper.toEntity(trainDetailRequest);
         TrainDetail savedTrainDetail = trainDetailRepository.save(trainDetail);
-        return TrainDetailMapper.toResponse(savedTrainDetail);
+        TrainDetailResponse trainDetailResponse = TrainDetailMapper.toResponse(savedTrainDetail);
+        trainDetailCache.put(savedTrainDetail.getTrainNumber(), trainDetailResponse);
+        return trainDetailResponse;
     }
 
     @Override
@@ -50,7 +64,9 @@ public class TrainDetailServiceImpl implements TrainDetailService {
         updateTrainSectionAndSeatDetails(trainDetail, trainDetailRequest);
 
         TrainDetail savedTrainDetail = trainDetailRepository.save(trainDetail);
-        return TrainDetailMapper.toResponse(savedTrainDetail);
+        TrainDetailResponse trainDetailResponse = TrainDetailMapper.toResponse(savedTrainDetail);
+        trainDetailCache.put(savedTrainDetail.getTrainNumber(), trainDetailResponse);
+        return trainDetailResponse;
     }
 
     private void updateTrainDetailFields(TrainDetail trainDetail, TrainDetailRequest trainDetailRequest) {
@@ -77,14 +93,22 @@ public class TrainDetailServiceImpl implements TrainDetailService {
 
     @Override
     public TrainDetailResponse getTrainDetail(Long trainNumber) {
+        TrainDetailResponse cachedTrainDetail = trainDetailCache.getIfPresent(trainNumber);
+        if (cachedTrainDetail != null) {
+            return cachedTrainDetail;
+        }
+
         TrainDetail trainDetail = trainDetailRepository.findById(trainNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Train Details Not Found"));
 
-        return TrainDetailMapper.toResponse(trainDetail);
+        TrainDetailResponse trainDetailResponse = TrainDetailMapper.toResponse(trainDetail);
+        trainDetailCache.put(trainDetailResponse.getTrainNumber(), trainDetailResponse);
+        return trainDetailResponse;
     }
 
     @Override
     public void deleteTrainDetail(Long trainNumber) {
         trainDetailRepository.deleteById(trainNumber);
+        trainDetailCache.invalidate(trainNumber);
     }
 }
