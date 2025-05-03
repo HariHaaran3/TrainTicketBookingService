@@ -30,7 +30,7 @@ mvn spring-boot:run
 
 ## Note: Default values are inserted into the in-memory database when starting the server.
 
-**Please log in using the browser: [http://localhost:8080/h2-console](http://localhost:8080/h2-console)**
+**Please log in using the browser: [http://localhost:9090/h2-console](http://localhost:9090/h2-console)**
 * **Driver Class:** org.h2.Driver
 * **JDBC URL:** jdbc:h2:mem:testdb
 * **User Name:** sa
@@ -60,7 +60,7 @@ SELECT * FROM ticket_booking_detail;
 
 ## 📝 Step 1: Create User
 
-* Endpoint: POST: http://localhost:8080/trainTicketBooking/v1/user
+* Endpoint: POST: http://localhost:9090/trainTicketBooking/v1/user
 * Description: Creates a new user.
 
 
@@ -92,7 +92,7 @@ SELECT * FROM ticket_booking_detail;
 
 ## 🔑 Step 2: Authentication
 
-* Endpoint: POST http://localhost:8080/trainTicketBooking/v1/authenticate
+* Endpoint: POST http://localhost:9090/trainTicketBooking/v1/authenticate
 * Description: Authenticates a user and generates a JWT token.
 
 
@@ -117,7 +117,7 @@ SELECT * FROM ticket_booking_detail;
 
 ## 3: Get User Details
 
-* Endpoint: GET http://localhost:8080/trainTicketBooking/v1/user/{userId}
+* Endpoint: GET http://localhost:9090/trainTicketBooking/v1/user/{userId}
 * Description: Retrieves user details by user ID.
 
 
@@ -164,7 +164,7 @@ SELECT * FROM ticket_booking_detail;
 
 ## 4: Delete User
 
-* Endpoint: DELETE http://localhost:8080/trainTicketBooking/v1/user/{userId}
+* Endpoint: DELETE http://localhost:9090/trainTicketBooking/v1/user/{userId}
 * Description: Deletes a user by user ID.
 
 
@@ -175,7 +175,7 @@ SELECT * FROM ticket_booking_detail;
 
 ## 5: Create Train Detail
 
-* Endpoint: POST http://localhost:8080/trainTicketBooking/v1/trainDetail
+* Endpoint: POST http://localhost:9090/trainTicketBooking/v1/trainDetail
 * Description: Creates a new train detail.
 
 
@@ -316,7 +316,7 @@ SELECT * FROM ticket_booking_detail;
 
 ## 6: Update Train Detail
 
-* Endpoint: PUT http://localhost:8080/trainTicketBooking/v1/trainDetail/{trainNumber}
+* Endpoint: PUT http://localhost:9090/trainTicketBooking/v1/trainDetail/{trainNumber}
 * Description: Updates an existing train detail by train number.
 
 
@@ -457,7 +457,7 @@ SELECT * FROM ticket_booking_detail;
 
 ## 7: Get Train Detail
 
-* Endpoint: GET http://localhost:8080/trainTicketBooking/v1/trainDetail/{trainNumber}
+* Endpoint: GET http://localhost:9090/trainTicketBooking/v1/trainDetail/{trainNumber}
 * Description: Retrieves train detail by train number.
 
 
@@ -538,7 +538,7 @@ Copy code
 
 ## 8: Delete Train Detail
 
-* Endpoint: DELETE http://localhost:8080/trainTicketBooking/v1/trainDetail/{trainNumber}
+* Endpoint: DELETE http://localhost:9090/trainTicketBooking/v1/trainDetail/{trainNumber}
 * Description: Deletes train detail by train number.
 
 
@@ -549,7 +549,7 @@ Copy code
 
 ## 9: Purchase Train Ticket
 
-* Endpoint: POST http://localhost:8080/trainTicketBooking/v1/purchaseTrainTicket
+* Endpoint: POST http://localhost:9090/trainTicketBooking/v1/purchaseTrainTicket
 * Description: Purchases a train ticket.
 
 
@@ -589,7 +589,7 @@ Copy code
 
 ## 10: Get Train Ticket Receipt by Booking ID
 
-* Endpoint: GET http://localhost:8080/trainTicketBooking/v1/trainTicketReceipt/{ticketBookingId}
+* Endpoint: GET http://localhost:9090/trainTicketBooking/v1/trainTicketReceipt/{ticketBookingId}
 * Description: Retrieves train ticket receipt by booking ID.
 
 
@@ -613,7 +613,7 @@ Copy code
 
 ## 11: Update Seat in Train Ticket Receipt
 
-* Endpoint: PUT http://localhost:8080/trainTicketBooking/v1/trainTicketReceipt/{ticketBookingId}/seat
+* Endpoint: PUT http://localhost:9090/trainTicketBooking/v1/trainTicketReceipt/{ticketBookingId}/seat
 * Description: Updates seat in the train ticket receipt.
 
 
@@ -644,7 +644,7 @@ newSeat: A_5
 
 ## 12: Delete Train Ticket Receipt
 
-* Endpoint: DELETE http://localhost:8080/trainTicketBooking/v1/trainTicketReceipt/{ticketBookingId}
+* Endpoint: DELETE http://localhost:9090/trainTicketBooking/v1/trainTicketReceipt/{ticketBookingId}
 * Description: Deletes train ticket receipt by booking ID.
 
 
@@ -655,7 +655,7 @@ newSeat: A_5
 
 ## 13: Get User Ticket Booking Details
 
-* Endpoint: GET http://localhost:8080/trainTicketBooking/v1/trainTicket/{userId}
+* Endpoint: GET http://localhost:9090/trainTicketBooking/v1/trainTicket/{userId}
 * Description: Retrieves all ticket booking details for a user by user ID.
 
 
@@ -694,7 +694,7 @@ newSeat: A_5
 
 ## 14. Delete User Ticket Booking Details
 
-* Endpoint: DELETE http://localhost:8080/trainTicketBooking/v1/trainTicket/user/{userId}
+* Endpoint: DELETE http://localhost:9090/trainTicketBooking/v1/trainTicket/user/{userId}
 * Description: Deletes all ticket booking details for a user by user ID.
 
 
@@ -704,7 +704,7 @@ newSeat: A_5
 
 ## 15. Get Allotted Train Section Details
 
-* Endpoint: GET http://localhost:8080/trainTicketBooking/v1/trainTicket/trainNumber/{trainNumber}/section/{section}
+* Endpoint: GET http://localhost:9090/trainTicketBooking/v1/trainTicket/trainNumber/{trainNumber}/section/{section}
 * Description: Retrieves all ticket booking details for a specific train number and section.
 
 
