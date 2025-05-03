@@ -7,7 +7,7 @@ This is a Spring Boot service for managing train ticket reservations and booking
 ## 🛠 Prerequisites
 
 Ensure you have the following installed:
-- Java 11
+- Java 17
 - Maven 3.6.3 or later
 
 ## 🔧 Building the Project
