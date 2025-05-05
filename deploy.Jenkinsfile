@@ -20,8 +20,10 @@ pipeline {
         stage('Read ECR Repo URI') {
             steps {
                 script {
-                    def output = bat(script: 'terraform -chdir=infra output -raw ecr_repo_uri', returnStdout: true).trim()
-                    env.ECR_REPO_URI = output
+                    env.ECR_REPO_URI = bat(
+                        script: 'terraform -chdir=infra output -raw ecr_repo_uri',
+                        returnStdout: true
+                    ).trim()
                     echo "ECR Repo URI: ${env.ECR_REPO_URI}"
                 }
             }
