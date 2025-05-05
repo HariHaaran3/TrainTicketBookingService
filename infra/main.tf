@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_ecr_repository" "this" {
-  name                 = "train-ticket-repo-new"
+  name                 = "train-ticket-repo"
   image_tag_mutability = "MUTABLE"
 }
 
