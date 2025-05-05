@@ -22,6 +22,7 @@ pipeline {
                 script {
                     def output = bat(script: 'terraform -chdir=infra output -raw ecr_repo_uri', returnStdout: true).trim()
                     env.ECR_REPO_URI = output
+                    echo "ECR Repo URI: ${env.ECR_REPO_URI}"
                 }
             }
         }
@@ -31,11 +32,8 @@ pipeline {
             }
         }
         stage('Tag Docker Image') {
-            steps {  // ✅ FIX: added steps block
-                script {
-                    def ecrRepoUri = bat(script: 'terraform -chdir=infra output -raw ecr_repo_uri', returnStdout: true).trim()
-                    bat "docker tag train-ticket-service ${ecrRepoUri}:latest"
-                }
+            steps {
+                bat "docker tag train-ticket-service %ECR_REPO_URI%:latest"
             }
         }
         stage('Login to ECR') {
