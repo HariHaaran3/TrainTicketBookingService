@@ -2,13 +2,17 @@ provider "aws" {
   region = "ap-south-1"
 }
 
+###############################
 # ECR
+###############################
 resource "aws_ecr_repository" "this" {
   name                 = "train-ticket-repo"
   image_tag_mutability = "MUTABLE"
 }
 
+###############################
 # VPC
+###############################
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
@@ -40,7 +44,9 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Security Groups
+###############################
+# SECURITY GROUPS
+###############################
 resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
 
@@ -84,7 +90,9 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
+###############################
 # ALB
+###############################
 resource "aws_lb" "this" {
   name               = "train-ticket-alb"
   internal           = false
@@ -122,60 +130,68 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# ACM Certificate (create after buying domain)
-# resource "aws_acm_certificate" "cert" {
-#   domain_name       = "mylearningapp.click"
-#   validation_method = "DNS"
-# }
+###############################
+# ROUTE53 ZONE
+###############################
+resource "aws_route53_zone" "main" {
+  name = "mylearningapp.click"
+}
 
-# DNS Validation Record
-# resource "aws_route53_record" "cert_validation" {
-#   name    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_name
-#   type    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_type
-#   zone_id = aws_route53_zone.main.zone_id
-#   records = [aws_acm_certificate.cert.domain_validation_options[0].resource_record_value]
-#   ttl     = 60
-# }
+###############################
+# ACM CERTIFICATE
+###############################
+resource "aws_acm_certificate" "cert" {
+  domain_name       = "mylearningapp.click"
+  validation_method = "DNS"
+}
 
-# Validate ACM Certificate
-# resource "aws_acm_certificate_validation" "cert_validation" {
-#   certificate_arn         = aws_acm_certificate.cert.arn
-#   validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
-# }
+resource "aws_route53_record" "cert_validation" {
+  name    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_name
+  type    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_type
+  zone_id = aws_route53_zone.main.zone_id
+  records = [aws_acm_certificate.cert.domain_validation_options[0].resource_record_value]
+  ttl     = 60
+}
 
-# ALB HTTPS Listener (after cert validated)
-# resource "aws_lb_listener" "https" {
-#   load_balancer_arn = aws_lb.this.arn
-#   port              = 443
-#   protocol          = "HTTPS"
-#   ssl_policy        = "ELBSecurityPolicy-2016-08"
-#   certificate_arn   = aws_acm_certificate_validation.cert_validation.certificate_arn
-#
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.this.arn
-#   }
-# }
+resource "aws_acm_certificate_validation" "cert_validation" {
+  certificate_arn         = aws_acm_certificate.cert.arn
+  validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
+}
 
-# Route53 Hosted Zone
-# resource "aws_route53_zone" "main" {
-#   name = "mylearningapp.click"
-# }
+###############################
+# ALB HTTPS LISTENER
+###############################
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.this.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = aws_acm_certificate_validation.cert_validation.certificate_arn
 
-# Route53 DNS Record
-# resource "aws_route53_record" "app" {
-#   zone_id = aws_route53_zone.main.zone_id
-#   name    = "app.mylearningapp.click"
-#   type    = "A"
-#
-#   alias {
-#     name                   = aws_lb.this.dns_name
-#     zone_id                = aws_lb.this.zone_id
-#     evaluate_target_health = true
-#   }
-# }
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.this.arn
+  }
+}
 
+###############################
+# ROUTE53 DNS RECORD
+###############################
+resource "aws_route53_record" "app" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "app.mylearningapp.click"
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.this.dns_name
+    zone_id                = aws_lb.this.zone_id
+    evaluate_target_health = true
+  }
+}
+
+###############################
 # ECS
+###############################
 resource "aws_ecs_cluster" "this" {
   name = "train-ticket-cluster"
 }
@@ -218,9 +234,12 @@ resource "aws_ecs_service" "this" {
     container_port   = 9090
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.http, aws_lb_listener.https]
 }
 
+###############################
+# AUTOSCALING
+###############################
 resource "aws_appautoscaling_target" "ecs" {
   max_capacity       = 3
   min_capacity       = 1
@@ -239,21 +258,24 @@ resource "aws_appautoscaling_policy" "scale_up" {
   step_scaling_policy_configuration {
     adjustment_type = "ChangeInCapacity"
     step_adjustment {
-      scaling_adjustment = 1
+      scaling_adjustment        = 1
       metric_interval_lower_bound = 0
     }
     cooldown = 60
   }
 }
 
+###############################
+# IAM ROLE
+###############################
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
       Principal = {
         Service = "ecs-tasks.amazonaws.com"
       }
@@ -266,6 +288,9 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+###############################
+# OUTPUTS
+###############################
 output "ecr_repo_uri" {
   value = aws_ecr_repository.this.repository_url
 }
@@ -280,4 +305,8 @@ output "ecs_cluster_name" {
 
 output "ecs_service_name" {
   value = aws_ecs_service.this.name
+}
+
+output "route53_record_url" {
+  value = "https://app.mylearningapp.click"
 }
