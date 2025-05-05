@@ -111,12 +111,12 @@ resource "aws_lb_target_group" "this" {
   target_type = "ip"
 
   health_check {
-    path                = "/actuator/health" # 🏆 update to health endpoint
+    path                = "/actuator/health"
     protocol            = "HTTP"
     interval            = 30
     healthy_threshold   = 3
     unhealthy_threshold = 3
-    matcher             = "200"              # 🏆 explicitly expect 200
+    matcher             = "200"
   }
 }
 

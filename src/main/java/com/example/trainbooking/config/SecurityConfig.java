@@ -49,7 +49,9 @@ public class SecurityConfig {
         http.csrf().disable()
                 .authorizeRequests(authorizeRequests ->
                         authorizeRequests
-                                .antMatchers("/trainTicketBooking/v1/authenticate", "/trainTicketBooking/v1/user", "/h2-console/**").permitAll()
+						.antMatchers("/actuator/health", "/trainTicketBooking/v1/authenticate",
+								"/trainTicketBooking/v1/user",
+								"/h2-console/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sessionManagement ->
