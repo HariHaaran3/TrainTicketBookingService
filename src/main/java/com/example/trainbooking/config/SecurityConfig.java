@@ -47,16 +47,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf().disable()
-                .authorizeRequests(authorizeRequests ->
-                        authorizeRequests
-						.antMatchers("/actuator/health", "/trainTicketBooking/v1/authenticate",
-								"/trainTicketBooking/v1/user",
-								"/h2-console/**").permitAll()
-                                .anyRequest().authenticated()
-                )
-                .sessionManagement(sessionManagement ->
-                        sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                );
+            .authorizeHttpRequests(authorizeRequests ->
+                authorizeRequests
+                    .requestMatchers("/actuator/health", "/trainTicketBooking/v1/authenticate",
+                                     "/trainTicketBooking/v1/user", "/h2-console/**").permitAll()
+                    .anyRequest().authenticated()
+            )
+            .sessionManagement(sessionManagement ->
+                sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            );
 
         http.headers().frameOptions().sameOrigin(); // Required for H2 console
 

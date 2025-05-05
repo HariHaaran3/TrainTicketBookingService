@@ -2,7 +2,7 @@ package com.example.trainbooking.serviceImpl;
 
 import java.util.concurrent.TimeUnit;
 
-import javax.transaction.Transactional;
+import jakarta.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

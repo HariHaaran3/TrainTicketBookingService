@@ -3,7 +3,7 @@ package com.example.trainbooking.config;
 import java.sql.Connection;
 import java.sql.Statement;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
