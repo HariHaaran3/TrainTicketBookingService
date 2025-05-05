@@ -145,11 +145,15 @@ resource "aws_acm_certificate" "cert" {
   validation_method = "DNS"
 }
 
+locals {
+  cert_validation = tolist(aws_acm_certificate.cert.domain_validation_options)[0]
+}
+
 resource "aws_route53_record" "cert_validation" {
-  name    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_name
-  type    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_type
+  name    = local.cert_validation.resource_record_name
+  type    = local.cert_validation.resource_record_type
   zone_id = aws_route53_zone.main.zone_id
-  records = [aws_acm_certificate.cert.domain_validation_options[0].resource_record_value]
+  records = [local.cert_validation.resource_record_value]
   ttl     = 60
 }
 
