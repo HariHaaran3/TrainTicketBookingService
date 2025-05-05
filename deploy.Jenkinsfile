@@ -27,6 +27,11 @@ pipeline {
                 }
             }
         }
+        stage('Build Maven Project') {
+            steps {
+                bat 'mvn clean package'
+            }
+        }
         stage('Build Docker Image') {
             steps {
                 bat "docker build -t train-ticket-service ."
