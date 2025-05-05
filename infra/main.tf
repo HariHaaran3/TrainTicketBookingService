@@ -2,17 +2,13 @@ provider "aws" {
   region = "ap-south-1"
 }
 
-#####################
-# ECR Repository
-#####################
+# ECR
 resource "aws_ecr_repository" "this" {
   name                 = "train-ticket-repo"
   image_tag_mutability = "MUTABLE"
 }
 
-#####################
-# VPC & Networking
-#####################
+# VPC
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
@@ -44,9 +40,7 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-#####################
 # Security Groups
-#####################
 resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
 
@@ -90,9 +84,7 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-#####################
-# Application Load Balancer
-#####################
+# ALB
 resource "aws_lb" "this" {
   name               = "train-ticket-alb"
   internal           = false
@@ -101,9 +93,7 @@ resource "aws_lb" "this" {
   subnets            = aws_subnet.public[*].id
 }
 
-#####################
 # Target Group
-#####################
 resource "aws_lb_target_group" "this" {
   name     = "train-ticket-tg"
   port     = 9090
@@ -120,7 +110,7 @@ resource "aws_lb_target_group" "this" {
   }
 }
 
-# FIX: HTTP listener FORWARD instead of redirect
+# ALB HTTP Listener
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.this.arn
   port              = 80
@@ -132,30 +122,28 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-#####################
-# (Optional) ACM Certificate (requires domain)
-#####################
+# ACM Certificate (create after buying domain)
 # resource "aws_acm_certificate" "cert" {
-#   domain_name       = "trainbooking.mycompany.com"
+#   domain_name       = "mylearningapp.click"
 #   validation_method = "DNS"
 # }
-#
+
+# DNS Validation Record
 # resource "aws_route53_record" "cert_validation" {
 #   name    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_name
 #   type    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_type
-#   zone_id = "<your-hosted-zone-id>"
+#   zone_id = aws_route53_zone.main.zone_id
 #   records = [aws_acm_certificate.cert.domain_validation_options[0].resource_record_value]
 #   ttl     = 60
 # }
-#
+
+# Validate ACM Certificate
 # resource "aws_acm_certificate_validation" "cert_validation" {
 #   certificate_arn         = aws_acm_certificate.cert.arn
 #   validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
 # }
 
-#####################
-# ALB HTTPS Listener (use ACM cert once validated)
-#####################
+# ALB HTTPS Listener (after cert validated)
 # resource "aws_lb_listener" "https" {
 #   load_balancer_arn = aws_lb.this.arn
 #   port              = 443
@@ -169,16 +157,29 @@ resource "aws_lb_listener" "http" {
 #   }
 # }
 
-#####################
-# ECS Cluster
-#####################
+# Route53 Hosted Zone
+# resource "aws_route53_zone" "main" {
+#   name = "mylearningapp.click"
+# }
+
+# Route53 DNS Record
+# resource "aws_route53_record" "app" {
+#   zone_id = aws_route53_zone.main.zone_id
+#   name    = "app.mylearningapp.click"
+#   type    = "A"
+#
+#   alias {
+#     name                   = aws_lb.this.dns_name
+#     zone_id                = aws_lb.this.zone_id
+#     evaluate_target_health = true
+#   }
+# }
+
+# ECS
 resource "aws_ecs_cluster" "this" {
   name = "train-ticket-cluster"
 }
 
-#####################
-# ECS Task Definition
-#####################
 resource "aws_ecs_task_definition" "this" {
   family                   = "train-ticket-task"
   requires_compatibilities = ["FARGATE"]
@@ -198,9 +199,6 @@ resource "aws_ecs_task_definition" "this" {
   }])
 }
 
-#####################
-# ECS Service
-#####################
 resource "aws_ecs_service" "this" {
   name            = "train-ticket-service"
   cluster         = aws_ecs_cluster.this.id
@@ -223,9 +221,6 @@ resource "aws_ecs_service" "this" {
   depends_on = [aws_lb_listener.http]
 }
 
-#####################
-# Auto Scaling
-#####################
 resource "aws_appautoscaling_target" "ecs" {
   max_capacity       = 3
   min_capacity       = 1
@@ -251,9 +246,6 @@ resource "aws_appautoscaling_policy" "scale_up" {
   }
 }
 
-#####################
-# IAM Role
-#####################
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
 
@@ -274,28 +266,6 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-#####################
-# Route53 DNS Record (optional)
-#####################
-# resource "aws_route53_zone" "main" {
-#   name = "mycompany.com"
-# }
-#
-# resource "aws_route53_record" "app" {
-#   zone_id = aws_route53_zone.main.zone_id
-#   name    = "trainbooking"
-#   type    = "A"
-#
-#   alias {
-#     name                   = aws_lb.this.dns_name
-#     zone_id                = aws_lb.this.zone_id
-#     evaluate_target_health = true
-#   }
-# }
-
-#####################
-# Outputs
-#####################
 output "ecr_repo_uri" {
   value = aws_ecr_repository.this.repository_url
 }
