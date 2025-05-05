@@ -57,13 +57,6 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -138,47 +131,6 @@ resource "aws_route53_zone" "main" {
 }
 
 ###############################
-# ACM CERTIFICATE
-###############################
-resource "aws_acm_certificate" "cert" {
-  domain_name       = "mylearningapp.click"
-  validation_method = "DNS"
-}
-
-locals {
-  cert_validation = tolist(aws_acm_certificate.cert.domain_validation_options)[0]
-}
-
-resource "aws_route53_record" "cert_validation" {
-  name    = local.cert_validation.resource_record_name
-  type    = local.cert_validation.resource_record_type
-  zone_id = aws_route53_zone.main.zone_id
-  records = [local.cert_validation.resource_record_value]
-  ttl     = 60
-}
-
-resource "aws_acm_certificate_validation" "cert_validation" {
-  certificate_arn         = aws_acm_certificate.cert.arn
-  validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
-}
-
-###############################
-# ALB HTTPS LISTENER
-###############################
-resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.this.arn
-  port              = 443
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = aws_acm_certificate_validation.cert_validation.certificate_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.this.arn
-  }
-}
-
-###############################
 # ROUTE53 DNS RECORD
 ###############################
 resource "aws_route53_record" "app" {
@@ -238,7 +190,7 @@ resource "aws_ecs_service" "this" {
     container_port   = 9090
   }
 
-  depends_on = [aws_lb_listener.http, aws_lb_listener.https]
+  depends_on = [aws_lb_listener.http]
 }
 
 ###############################
@@ -312,5 +264,5 @@ output "ecs_service_name" {
 }
 
 output "route53_record_url" {
-  value = "https://app.mylearningapp.click"
+  value = "http://app.mylearningapp.click"
 }
