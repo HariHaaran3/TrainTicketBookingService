@@ -68,11 +68,20 @@ resource "aws_security_group" "alb_sg" {
 resource "aws_security_group" "ecs_sg" {
   vpc_id = aws_vpc.main.id
 
+  # Allow ALB to talk to ECS
   ingress {
     from_port       = 9090
     to_port         = 9090
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  # TEMP: Allow public ingress on 9090 for debug
+  ingress {
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -94,24 +103,23 @@ resource "aws_lb" "this" {
   subnets            = aws_subnet.public[*].id
 }
 
-# Target Group
 resource "aws_lb_target_group" "this" {
-  name     = "train-ticket-tg"
-  port     = 9090
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  name        = "train-ticket-tg"
+  port        = 9090
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/actuator/health" # 🏆 update to health endpoint
     protocol            = "HTTP"
     interval            = 30
     healthy_threshold   = 3
     unhealthy_threshold = 3
+    matcher             = "200"              # 🏆 explicitly expect 200
   }
 }
 
-# ALB HTTP Listener
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.this.arn
   port              = 80
@@ -130,9 +138,6 @@ resource "aws_route53_zone" "main" {
   name = "mylearningapp.click"
 }
 
-###############################
-# ROUTE53 DNS RECORD
-###############################
 resource "aws_route53_record" "app" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "app.mylearningapp.click"
