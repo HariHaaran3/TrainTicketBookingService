@@ -121,7 +121,7 @@ resource "aws_lb_target_group" "this" {
 }
 
 #####################
-# ALB HTTP Listener
+# ALB HTTP Listener (with redirect to HTTPS)
 #####################
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.this.arn
@@ -129,21 +129,45 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.this.arn
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
-  depends_on = [aws_lb_target_group.this]
 }
 
 #####################
-# (Optional) HTTPS Listener – Add once ACM cert is issued
+# (Optional) ACM Certificate (requires domain)
+#####################
+# resource "aws_acm_certificate" "cert" {
+#   domain_name       = "trainbooking.mycompany.com"
+#   validation_method = "DNS"
+# }
+#
+# resource "aws_route53_record" "cert_validation" {
+#   name    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_name
+#   type    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_type
+#   zone_id = "<your-hosted-zone-id>"
+#   records = [aws_acm_certificate.cert.domain_validation_options[0].resource_record_value]
+#   ttl     = 60
+# }
+#
+# resource "aws_acm_certificate_validation" "cert_validation" {
+#   certificate_arn         = aws_acm_certificate.cert.arn
+#   validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
+# }
+
+#####################
+# ALB HTTPS Listener (use ACM cert once validated)
 #####################
 # resource "aws_lb_listener" "https" {
 #   load_balancer_arn = aws_lb.this.arn
 #   port              = 443
 #   protocol          = "HTTPS"
 #   ssl_policy        = "ELBSecurityPolicy-2016-08"
-#   certificate_arn   = "<your-certificate-arn>"
+#   certificate_arn   = aws_acm_certificate_validation.cert_validation.certificate_arn
 #
 #   default_action {
 #     type             = "forward"
@@ -257,12 +281,15 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 }
 
 #####################
-# Route53 DNS Record
+# Route53 DNS Record (optional)
 #####################
-# Uncomment only if you own domain & hosted zone
+# resource "aws_route53_zone" "main" {
+#   name = "mycompany.com"
+# }
+#
 # resource "aws_route53_record" "app" {
-#   zone_id = "<your-hosted-zone-id>"
-#   name    = "app.example.com"
+#   zone_id = aws_route53_zone.main.zone_id
+#   name    = "trainbooking"
 #   type    = "A"
 #
 #   alias {
