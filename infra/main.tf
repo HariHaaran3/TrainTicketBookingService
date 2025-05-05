@@ -1,9 +1,10 @@
 provider "aws" {
-  region = var.region
+  region = "ap-south-1"
 }
 
 resource "aws_ecr_repository" "this" {
-  name = "train-ticket-repo"
+  name                 = "train-ticket-repo-new"
+  image_tag_mutability = "MUTABLE"
 }
 
 resource "aws_vpc" "main" {
@@ -11,20 +12,23 @@ resource "aws_vpc" "main" {
 }
 
 resource "aws_subnet" "public" {
-  count                   = 2
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
+  count = 2
+  vpc_id = aws_vpc.main.id
+  cidr_block = element(["10.0.0.0/24", "10.0.1.0/24"], count.index)
+  availability_zone = element(["ap-south-1a", "ap-south-1b"], count.index)
   map_public_ip_on_launch = true
 }
 
 resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
+
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -35,12 +39,14 @@ resource "aws_security_group" "alb_sg" {
 
 resource "aws_security_group" "ecs_sg" {
   vpc_id = aws_vpc.main.id
+
   ingress {
     from_port       = 9090
     to_port         = 9090
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -58,13 +64,17 @@ resource "aws_lb" "this" {
 }
 
 resource "aws_lb_target_group" "this" {
-  name        = "train-ticket-tg"
-  port        = 9090
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  name     = "train-ticket-tg"
+  port     = 9090
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
   health_check {
-    path = "/actuator/health"
+    path                = "/actuator/health"
+    protocol            = "HTTP"
+    interval            = 30
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
   }
 }
 
@@ -85,20 +95,20 @@ resource "aws_ecs_cluster" "this" {
 
 resource "aws_ecs_task_definition" "this" {
   family                   = "train-ticket-task"
-  network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
-  execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ecsTaskExecutionRole"
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
   container_definitions = jsonencode([{
-    name  = "train-ticket-container"
-    image = "${aws_ecr_repository.this.repository_url}:latest"
+    name      = "train-ticket-container"
+    image     = "${aws_ecr_repository.this.repository_url}:latest"
     portMappings = [{
       containerPort = 9090
       hostPort      = 9090
       protocol      = "tcp"
     }]
-    essential = true
   }])
 }
 
@@ -110,8 +120,8 @@ resource "aws_ecs_service" "this" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = aws_subnet.public[*].id
-    security_groups = [aws_security_group.ecs_sg.id]
+    subnets          = aws_subnet.public[*].id
+    security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
@@ -120,6 +130,42 @@ resource "aws_ecs_service" "this" {
     container_name   = "train-ticket-container"
     container_port   = 9090
   }
+
+  depends_on = [aws_lb_listener.this]
 }
 
-data "aws_caller_identity" "current" {}
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "ecsTaskExecutionRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+output "ecr_repo_uri" {
+  value = aws_ecr_repository.this.repository_url
+}
+
+output "alb_dns_name" {
+  value = aws_lb.this.dns_name
+}
+
+output "ecs_cluster_name" {
+  value = aws_ecs_cluster.this.name
+}
+
+output "ecs_service_name" {
+  value = aws_ecs_service.this.name
+}
